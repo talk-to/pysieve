@@ -33,7 +33,7 @@
 . /etc/rc.d/init.d/functions
 
 # Check for missing binaries
-PYSIEVED=/opt/pysieved/pysieved
+PYSIEVED=/opt/pysieved/pysieved.py
 test -x $PYSIEVED || { echo "$PYSIEVED not installed";
         if [ "$1" = "stop" ]; then exit 0;
         else exit 5; fi; }
