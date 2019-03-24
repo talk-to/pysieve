@@ -1,0 +1,115 @@
+#!/bin/bash
+
+# Copyright (c) 2019 Krishna Kumar
+# All rights reserved.
+#
+# Author: Krishna Kumar, 2019
+#
+# /etc/init.d/pysieved
+#   and its symbolic link
+# /usr/sbin/pysieved
+# pysieved        Startup script for the Pysieved Managesieve Server
+#
+# chkconfig: - 85 15
+# description: Pysieved is Python implementation of Managesieve Server
+# processname: pysieved
+# config: /etc/local/pysieved.ini
+# pidfile: /var/run/pysieved.pid
+
+### BEGIN INIT INFO
+# Provides:          pysieved
+# Required-Start:    $network
+# Required-Stop:
+# Default-Start:     3 5
+# Default-Stop:      0 1 2 6
+# Short-Description: pysieved managesieve server, providing a sieve protocol managesieve server
+# Description:       Pysieved is Python implementation of Managesieve Server
+#	We want it to be active in runlevels 3
+#	and 5, as these are the runlevels with the network
+#	available.
+### END INIT INFO
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Check for missing binaries
+PYSIEVED=/opt/pysieved/pysieved
+test -x $PYSIEVED || { echo "$PYSIEVED not installed";
+        if [ "$1" = "stop" ]; then exit 0;
+        else exit 5; fi; }
+
+# Check for existence of needed config file
+PYSIEVED_CONFIG=/etc/local/pysieved.ini
+test -r $PYSIEVED_CONFIG || { echo "$PYSIEVED_CONFIG not existing";
+        if [ "$1" = "stop" ]; then exit 0;
+        else exit 6; fi; }
+
+PYSIEVED_USER=root
+RETVAL=0
+prog='pysieved'
+LOCKFILE=/var/lock/subsys/$prog
+PIDFILE=/var/run/pysieved.pid
+				
+
+start() {
+        echo -n "Starting $prog: "
+				if [ ! -f /var/lock/subsys/ ]; then
+					daemon --user $PYSIEVED_USER $PYSIEVED
+        	RETVAL=$?
+        	[ $RETVAL -eq 0 ] && touch $LOCKFILE
+        	echo
+        	return $RETVAL
+				fi
+				echo -n "Lockfile Present --> $LOCKFILE "
+}
+
+stop() {
+       
+			  if [ $UID -ne 0 ] ; then
+         echo "User has insufficient privilege."
+         exit 4
+				fi
+				echo -n $"Stopping $prog: "
+				if [ -n "`pidfileofproc $PYSIEVED`" ]; then
+						killproc $PYSIEVED
+				RETVAL=3
+				else
+						failure $"Stopping $prog"
+				fi
+				retval=$?
+				echo
+        [ $RETVAL -eq 0 ] && rm -f $LOCKFILE
+        echo
+        return $RETVAL
+}
+
+status() {
+				pid=`cat $PIDFILE` 
+        echo -n "Checking $prog status: "
+        status -p $PIDFILE $PYSIEVED
+        RETVAL=$?
+				if [ $RETVAL -eq 0 ]
+					echo "Process running as PID $pid"
+        return $RETVAL
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $prog {start|stop|status|restart}"
+        exit 1
+        ;;
+esac
+exit $RETVAL
