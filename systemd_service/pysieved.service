@@ -1,0 +1,14 @@
+[Unit]
+Description=Pysieved Managesieve Server
+After=network.target
+ConditionFileNotEmpty=/usr/local/etc/pysieved.ini
+ConditionPathExists=/opt/pysieved
+
+[Service]
+Type=forking
+PIDFile=/var/run/pysieved.pid
+ExecStart=/opt/pysieved/pysieved.py
+ExecStop=/bin/kill -- $MAINPID
+
+[Install]
+WantedBy=multi-user.target

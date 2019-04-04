@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# Copyright (c) 2019 Krishna Kumar
+# All rights reserved.
+#
+# Author: Krishna Kumar, 2019
+#
+# /etc/init.d/pysieved
+#   and its symbolic link
+# /usr/sbin/pysieved
+# pysieved        Startup script for the Pysieved Managesieve Server
+#
+# chkconfig: - 85 15
+# description: Pysieved is Python implementation of Managesieve Server
+# processname: pysieved
+# config: /usr/local/etc/pysieved.ini
+# pidfile: /var/run/pysieved.pid
+
+### BEGIN INIT INFO
+# Provides:          pysieved
+# Required-Start:    $network
+# Required-Stop:
+# Default-Start:     3 5
+# Default-Stop:      0 1 2 6
+# Short-Description: pysieved managesieve server, providing a sieve protocol managesieve server
+# Description:       Pysieved is Python implementation of Managesieve Server
+#	We want it to be active in runlevels 3
+#	and 5, as these are the runlevels with the network
+#	available.
+### END INIT INFO
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Check for missing binaries
+PYSIEVED=/opt/pysieved/pysieved.py
+test -x $PYSIEVED || { echo "$PYSIEVED not installed";
+        if [ "$1" = "stop" ]; then exit 0;
+        else exit 5; fi; }
+
+# Check for existence of needed config file
+PYSIEVED_CONFIG=/usr/local/etc/pysieved.ini
+test -r $PYSIEVED_CONFIG || { echo "$PYSIEVED_CONFIG not existing";
+        if [ "$1" = "stop" ]; then exit 0;
+        else exit 6; fi; }
+
+PYSIEVED_USER=root
+RETVAL=0
+prog='pysieved'
+LOCKFILE=/var/lock/subsys/pysieved
+PIDFILE=/var/run/pysieved.pid
+				
+
+start() {
+        echo -n "Starting $prog: "
+	if [ ! -f /var/lock/subsys/pysieved ]; then
+	  daemon --user $PYSIEVED_USER $PYSIEVED
+        RETVAL=$?
+        [ $RETVAL -eq 0 ] && touch $LOCKFILE
+        echo
+        return $RETVAL
+	fi
+        echo "Lockfile Present --> $LOCKFILE \n"
+}
+
+stop() {
+        
+        if [ ! -f "$PIDFILE" ] || ! kill -0 $(cat "$PIDFILE"); then
+    	  echo "Service not running" >&2
+    	  return 1
+  	fi
+        echo "Stopping service $prog" >&2
+        kill -15 $(cat "$PIDFILE") && rm -f "$PIDFILE"
+        RETVAL=$?
+        echo 'Service stopped' >&2
+        [ $RETVAL -eq 0 ] && rm -f $LOCKFILE
+        return $RETVAL
+}
+
+status() {
+        
+        if [ -f $PIDFILE ] && [ -f $LOCKFILE ]; then
+	  local pid=`cat $PIDFILE`
+          local retval=`ps --no-headers -o comm $pid`
+          
+          echo  "Checking $prog status: "
+          echo  "$prog Running with PID : $pid"   
+          return 0
+        elif [ -f $LOCKFILE ]; then
+          echo  "Process is stopped but Lockfile exists"
+          echo  "Manually remove lock --> $LOCKFILE"
+        else
+          echo  "Process not Running"
+        fi 
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $prog {start|stop|status|restart}"
+        exit 1
+        ;;
+esac
+exit $RETVAL
